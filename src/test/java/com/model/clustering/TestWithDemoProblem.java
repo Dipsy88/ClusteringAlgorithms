@@ -9,15 +9,15 @@ import com.model.clustering.algorithms.AffinityPropagation2;
 import com.model.clustering.algorithms.PAMClustering;
 import com.model.clustering.util.GenerateData;
 
-public class Main {
-
-	private final static int NUM_CLUSTER = 2; // for clustering algorithm that need "k"
+public class TestWithDemoProblem {
+	private final static int NUM_CLUSTER = 3; // for clustering algorithm that need "k"
+	private final static String file = "src/main/resources/Similarities.txt";
 
 	public static void main(String[] args) {
 		// initialize data
 		GenerateData generateData = new GenerateData();
 
-		Map<String, Map<String, Double>> dataSetMap = generateData.run();
+		Map<String, Map<String, Double>> dataSetMap = generateData.readFile(file);
 //		generateData.printGeneratedData(dataSetMap);
 		List<PAMClustering.Cluster> clusterPAM = clusterPAM(dataSetMap);
 		System.out.println("PAM clustering");
@@ -74,8 +74,6 @@ public class Main {
 				}
 				// connection to other datapoint exists
 				if (dataSetMap.get(dataPoints.get(i)).containsKey(dataPoints.get(j)))
-//					ret[i][j] = -dataSetMap.get(dataPoints.get(i)).get(dataPoints.get(j))
-//							* dataSetMap.get(dataPoints.get(i)).get(dataPoints.get(j));
 					ret[i][j] = dataSetMap.get(dataPoints.get(i)).get(dataPoints.get(j));
 				// connection does not exist
 				else
@@ -92,5 +90,4 @@ public class Main {
 			dpList.add(key);
 		return dpList;
 	}
-
 }

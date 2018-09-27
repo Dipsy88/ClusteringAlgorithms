@@ -47,7 +47,6 @@ public class PAMClustering {
 			Cluster cluster = entry.getValue();
 			newCentroidList.add(cluster.getDataCenterList().get(assignToCluster(cluster)));
 		}
-
 		isChanged = !listEqualsIgnoreOrder(newCentroidList, centroidList);
 		centroidList = newCentroidList;
 
@@ -62,7 +61,6 @@ public class PAMClustering {
 		int bestCenter = 0;
 		double similarity = 0;
 		double bestSimilarity = Double.MAX_VALUE;
-		int pos = 0;
 
 		for (int i = 0; i < cluster.getDataCenterList().size(); i++) {
 			similarity = 0;
@@ -70,13 +68,12 @@ public class PAMClustering {
 				if (i == j)
 					continue;
 				similarity += calculateDistance(cluster.getDataCenterList().get(i), cluster.getDataCenterList().get(j));
-				if (similarity < bestSimilarity) {
-					bestSimilarity = similarity;
-					bestCenter = i;
-				}
+			}
+			if (similarity < bestSimilarity) {
+				bestSimilarity = similarity;
+				bestCenter = i;
 			}
 		}
-//		System.out.println(bestCenter);
 		return bestCenter;
 	}
 

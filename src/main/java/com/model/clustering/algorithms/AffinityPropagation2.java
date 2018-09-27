@@ -6,9 +6,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-// from elki
-//https://github.com/elki-project/elki/
-public class AffinityPropagation {
+// from https://github.com/rodrigooleao/teste/blob/master/papers/MLA_AffinityPropagation.pdf
+// https://github.com/jincheng9/AffinityPropagation/blob/master/affinity_propagation.cpp
+
+public class AffinityPropagation2 {
 	private int numberOfDataPoints;
 	private double[][] matrix;
 	private double[][] s; // similarity matrix
@@ -16,91 +17,85 @@ public class AffinityPropagation {
 	private double[][] a; // availability matrix
 	private int iter = 2000; // maximum number of iterations
 	private double lambda = 0.5; // damping factor
-	private int convergence = 10; // terminations after "10" number of iterations with no changes
-	// for preferences for all data points, compute median if is 0
+
 	private double median = 0.;
-
-	private int[] assignment;
-
-	public int[] getAssignment() {
-		return assignment;
-	}
-
-	public void setAssignment(int[] assignment) {
-		this.assignment = assignment;
-	}
 
 	public List<ClusterIds> run() {
 		// compute preferences before;
 		updatePreferences();
 
 		int inactive = 0;
-		for (int i = 0; i < this.iter && inactive < convergence; i++) {
+		for (int m = 0; m < this.iter; m++) {
 			// update responsibility matrix
-			for (int j = 0; j < this.numberOfDataPoints; j++) {
-				double[] aj = this.a[j], rj = this.r[j], sj = this.s[j];
-				// find the two largest values
-				double max1 = Double.NEGATIVE_INFINITY, max2 = Double.NEGATIVE_INFINITY;
-				int maxk = -1;
+			for (int i = 0; i < this.numberOfDataPoints; i++) {
 				for (int k = 0; k < this.numberOfDataPoints; k++) {
-					double val = aj[k] + sj[k];
-					if (val > max1) {
-						max2 = max1;
-						max1 = val;
-						maxk = k;
-					} else if (val > max2)
-						max2 = val;
-				}
-				// update r with the maximum known value
-				for (int k = 0; k < this.numberOfDataPoints; k++) {
-					double val = sj[k] - ((k != maxk) ? max1 : max2);
-					rj[k] = rj[k] * this.lambda + val * (1. - lambda);
+					double max = Double.NEGATIVE_INFINITY;
+					for (int kk = 0; kk < k; kk++) {
+						if (this.s[i][kk] + a[i][kk] > max)
+							max = this.s[i][kk] + this.a[i][kk];
+					}
+					for (int kk = k + 1; kk < this.numberOfDataPoints; kk++) {
+						if (this.s[i][kk] + this.a[i][kk] > max)
+							max = this.s[i][kk] + this.a[i][kk];
+					}
+					this.r[i][k] = (1 - this.lambda) * (this.s[i][k] - max) + lambda * r[i][k];
 				}
 			}
-			// update the availability matrix
-			for (int j = 0; j < this.numberOfDataPoints; j++) {
-				// compute sum of max(0, r_kj) for all k
-				// do not apply the max for r_jj
-				double colposum = 0;
+			// update availability
+			for (int i = 0; i < this.numberOfDataPoints; i++) {
 				for (int k = 0; k < this.numberOfDataPoints; k++) {
-					if (k == j || this.r[k][j] > 0.) {
-						colposum += this.r[k][j];
+					double sum = 0.;
+					if (i == k) {
+						for (int ii = 0; ii < i; ii++)
+							sum += (0. > this.r[ii][k]) ? 0. : this.r[ii][k];
+						for (int ii = i + 1; ii < this.numberOfDataPoints; ii++)
+							sum += (0. > this.r[ii][k]) ? 0. : this.r[ii][k];
+						this.a[i][k] = (1 - lambda) * sum + lambda * this.a[i][k];
+					} else {
+						int maxik = (i > k) ? i : k;
+						int minik = (i < k) ? i : k;
+						for (int ii = 0; ii < minik; ii++)
+							sum += (0. > this.r[ii][k]) ? 0. : this.r[ii][k];
+						for (int ii = minik + 1; ii < maxik; ii++)
+							sum += (0. > this.r[ii][k]) ? 0. : this.r[ii][k];
+						for (int ii = maxik + 1; ii < this.numberOfDataPoints; ii++)
+							sum += (0. > this.r[ii][k]) ? 0. : this.r[ii][k];
+						this.a[i][k] = (1 - lambda) * ((0. < (this.r[k][k] + sum)) ? 0. : this.r[k][k] + sum)
+								+ lambda * this.a[i][k];
+
 					}
 				}
-				for (int k = 0; k < this.numberOfDataPoints; k++) {
-					double val = colposum;
-					// adjust column sum by one extra term
-					if (k == j || this.r[k][j] > 0.)
-						val -= this.r[k][j];
-					if (k != j && val > 0.)
-						val = 0.;
-					this.a[k][j] = this.a[k][j] * this.lambda + val * (1 - this.lambda);
+			}
+		}
+		// find the exemplar
+		double[][] e = new double[numberOfDataPoints][numberOfDataPoints];
+		List<Integer> center = new ArrayList<Integer>();
+//		e[this.numberOfDataPoints][this.numberOfDataPoints];
+		for (int i = 0; i < this.numberOfDataPoints; i++) {
+			e[i][i] = r[i][i] + a[i][i];
+			if (e[i][i] > 0)
+				center.add(i);
+
+		}
+		// data point assignment, idx[i] is the exemplar for data point i
+		int[] idx = new int[this.numberOfDataPoints];
+		for (int i = 0; i < this.numberOfDataPoints; i++) {
+			int idxI = 0;
+			double maxSim = Double.NEGATIVE_INFINITY;
+			for (int j = 0; j < center.size(); j++) {
+				int c = center.get(j);
+				if (this.s[i][c] > maxSim) {
+					maxSim = this.s[i][c];
+					idxI = c;
 				}
 			}
-			int changed = 0;
-			for (int k = 0; k < this.numberOfDataPoints; k++) {
-				double[] ak = this.a[k], rk = this.r[k];
-				double max = Double.NEGATIVE_INFINITY;
-				int maxj = -1;
-				for (int j = 0; j < this.numberOfDataPoints; j++) {
-					double v = ak[j] + rk[j];
-					if (v > max || (k == j && v >= max)) {
-						max = v;
-						maxj = j;
-					}
-				}
-				if (this.assignment[k] != maxj) {
-					changed += 1;
-					this.assignment[k] = maxj;
-				}
-			}
-			inactive = (changed > 0) ? 0 : (inactive + 1);
+			idx[i] = idxI;
 		}
 
 		// store similar ids to cluster
 		Map<Integer, List<Integer>> idClusteredMap = new HashMap<>();
 		int position = 0;
-		for (Integer item : this.assignment) {
+		for (Integer item : idx) {
 			List<Integer> valList = new ArrayList<Integer>();
 			if (idClusteredMap.containsKey(item))
 				valList = idClusteredMap.get(item);
@@ -118,38 +113,35 @@ public class AffinityPropagation {
 
 	}
 
-	public AffinityPropagation(double[][] matrix) {
+	public AffinityPropagation2(double[][] matrix) {
 		this.matrix = matrix;
 		this.numberOfDataPoints = matrix.length;
 
 		this.r = new double[numberOfDataPoints][numberOfDataPoints];
 		this.a = new double[numberOfDataPoints][numberOfDataPoints];
-		this.assignment = new int[numberOfDataPoints];
+
 		this.s = matrix;
 	}
 
-	public AffinityPropagation(double[][] matrix, double median) {
+	public AffinityPropagation2(double[][] matrix, double median) {
 		this.matrix = matrix;
 		this.numberOfDataPoints = matrix.length;
 
 		this.r = new double[numberOfDataPoints][numberOfDataPoints];
 		this.a = new double[numberOfDataPoints][numberOfDataPoints];
-		this.assignment = new int[numberOfDataPoints];
 		this.s = matrix;
 		this.median = median;
 	}
 
-	public AffinityPropagation(double[][] matrix, int iter, double lambda, int covergence) {
+	public AffinityPropagation2(double[][] matrix, int iter, double lambda) {
 		this.matrix = matrix;
 		this.iter = iter;
 		this.lambda = lambda;
-		this.convergence = covergence;
 
 		this.numberOfDataPoints = matrix.length;
 
 		this.r = new double[numberOfDataPoints][numberOfDataPoints];
 		this.a = new double[numberOfDataPoints][numberOfDataPoints];
-		assignment = new int[numberOfDataPoints];
 		this.s = matrix;
 	}
 
