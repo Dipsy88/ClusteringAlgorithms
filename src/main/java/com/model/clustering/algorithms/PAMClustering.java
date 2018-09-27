@@ -136,7 +136,6 @@ public class PAMClustering {
 		String key;
 
 		for (int i = 0; i < numCluster; i++) {
-			Cluster cluster = new Cluster();
 			do {
 				key = keysAsArray.get(r.nextInt(keysAsArray.size()));
 			} while (this.centroidList.contains(key));

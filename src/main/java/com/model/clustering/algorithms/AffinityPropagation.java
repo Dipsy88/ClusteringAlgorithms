@@ -12,7 +12,7 @@ public class AffinityPropagation {
 	private int numberOfDataPoints;
 	private double[][] matrix;
 	private double[][] s; // similarity matrix
-	private double[][] r; // responsiblity matrix
+	private double[][] r; // responsibility matrix
 	private double[][] a; // availability matrix
 	private int iter = 2000; // maximum number of iterations
 	private double lambda = 0.5; // damping factor
